@@ -31,21 +31,35 @@ class TokenResponse(BaseModel):
 
 app = FastAPI()
 
-origins = [
-    "http://localhost:3000",
-    "https://localhost:3000",
-]
+# CORS configuration: allow all origins by default to simplify previews and Netlify builds
+# Tighten this in production by setting FRONTEND_URL or CORS_ORIGIN_REGEX
+allow_all = os.getenv("CORS_ALLOW_ALL", "true").lower() == "true"
 frontend_env = os.getenv("FRONTEND_URL")
-if frontend_env:
-    origins.append(frontend_env)
+origin_regex = os.getenv("CORS_ORIGIN_REGEX")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins if origins else ["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if allow_all and not origin_regex:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    origins = [
+        "http://localhost:3000",
+        "https://localhost:3000",
+    ]
+    if frontend_env:
+        origins.append(frontend_env)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_origin_regex=origin_regex,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 @app.get("/")
 def read_root():
